@@ -1,0 +1,56 @@
+import ccxt
+import openpyxl
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+
+exchange = ccxt.binance()
+
+def buscar_dados_criptomoedas():
+    # Obter os tickers (pares de mercado)
+    mercados = exchange.fetch_tickers()
+    dados_criptos = []
+    
+    for ticker, info in mercados.items():
+        if ticker.endswith("/USDT"):  # Focar em pares com dólar (USDT)
+            nome = ticker.split("/")[0]  # Nome da moeda
+            preco_atual = info["last"]  # Último preço
+            variacao_24h = info["percentage"]  # Variação em 24h
+            dados_criptos.append([nome, preco_atual, variacao_24h])
+    
+    return dados_criptos
+
+# Função para salvar dados em uma planilha Excel
+def salvar_dados_excel(dados):
+    # Criar nova planilha
+    planilha_trabalho = openpyxl.Workbook()
+    aba = planilha_trabalho.active
+    aba.title = "Criptomoedas"
+
+    cabecalhos = ["Criptomoeda", "Preço Atual (USDT)", "Variação 24h (%)"]
+    aba.append(cabecalhos)
+
+    for num_coluna, cabecalho in enumerate(cabecalhos, start=1):
+        celula = aba.cell(row=1, column=num_coluna)
+        celula.font = Font(bold=True)
+        celula.alignment = Alignment(horizontal="center")
+
+    for cripto in dados:
+        aba.append(cripto)
+
+    for coluna in aba.columns:
+        comprimento_max = 0
+        letra_coluna = get_column_letter(coluna[0].column)
+        for celula in coluna:
+            if celula.value:
+                comprimento_max = max(comprimento_max, len(str(celula.value)))
+        aba.column_dimensions[letra_coluna].width = comprimento_max + 2
+
+    # Salvar planilha
+    planilha_trabalho.save("valorizacao_criptomoedas.xlsx")
+    print("Planilha criada com sucesso!")
+
+# Executar o programa
+if __name__ == "__main__":
+    print("Buscando dados de criptomoedas...")
+    dados = buscar_dados_criptomoedas()
+    salvar_dados_excel(dados)
